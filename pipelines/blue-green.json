@@ -1,0 +1,341 @@
+{
+    "keepWaitingPipelines": false,
+    "lastModifiedBy": "gavawe2064@ozatvn.com",
+    "limitConcurrent": true,
+    "schema": "1",
+    "spelEvaluator": "v4",
+    "stages": [
+      {
+        "account": "minikube",
+        "cloudProvider": "kubernetes",
+        "expectedArtifacts": [],
+        "manifestArtifactId": "bfe89309-9a3c-4b67-9130-485047f696a3",
+        "moniker": {
+          "app": "flask-app"
+        },
+        "name": "Deploy (Staging)",
+        "namespaceOverride": "default",
+        "refId": "1",
+        "requiredArtifactIds": [],
+        "requiredArtifacts": [
+          {
+            "artifact": {
+              "artifactAccount": "custom-artifact",
+              "customKind": true,
+              "id": "17d4f491-f421-4dc5-9f89-491917ab5992",
+              "name": "ealii/flask-app",
+              "reference": "${ image_ref }",
+              "type": "docker/image",
+              "version": ""
+            }
+          }
+        ],
+        "requisiteStageRefIds": [
+          "3"
+        ],
+        "skipExpressionEvaluation": false,
+        "source": "artifact",
+        "trafficManagement": {
+          "enabled": true,
+          "options": {
+            "enableTraffic": true,
+            "namespace": "default",
+            "services": [
+              "service flask-app"
+            ],
+            "strategy": "highlander"
+          }
+        },
+        "type": "deployManifest"
+      },
+      {
+        "expectedArtifacts": [
+          {
+            "defaultArtifact": {
+              "customKind": true,
+              "id": "0d71cb8b-c4ec-4900-9382-3e7cba642b07"
+            },
+            "displayName": "application-manifest",
+            "id": "bfe89309-9a3c-4b67-9130-485047f696a3",
+            "matchArtifact": {
+              "artifactAccount": "embedded-artifact",
+              "customKind": false,
+              "id": "6e1ac1e3-c01b-4b54-885e-7981e9a68f8a",
+              "type": "embedded/base64"
+            },
+            "useDefaultArtifact": false,
+            "usePriorArtifact": false
+          }
+        ],
+        "inputArtifact": {
+          "account": "github.com",
+          "artifact": {
+            "artifactAccount": "github.com",
+            "customKind": true,
+            "id": "29f8e9ce-b155-4a89-8698-109e4533fc2e",
+            "location": "deploy",
+            "reference": "https://github.com/ealii/flask-app.git",
+            "type": "git/repo",
+            "version": "master"
+          }
+        },
+        "kustomizeFilePath": "deploy/kustomization.yaml",
+        "name": "Manifest",
+        "overrides": {},
+        "refId": "3",
+        "requisiteStageRefIds": [
+          "4"
+        ],
+        "templateRenderer": "KUSTOMIZE4",
+        "type": "bakeManifest"
+      },
+      {
+        "failOnFailedExpressions": true,
+        "name": "Parameters",
+        "refId": "4",
+        "requisiteStageRefIds": [],
+        "type": "evaluateVariables",
+        "variables": [
+          {
+            "key": "cluster_name",
+            "value": "staging"
+          },
+          {
+            "key": "stack_name",
+            "value": "blue"
+          },
+          {
+            "key": "image_ref",
+            "value": "${ trigger.properties['RepoTags'][0] }"
+          }
+        ]
+      },
+      {
+        "failPipeline": true,
+        "instructions": "Promote <b>Staging</b> to <b>Production</b>?",
+        "judgmentInputs": [],
+        "name": "Swap Approval",
+        "notifications": [],
+        "refId": "5",
+        "requisiteStageRefIds": [
+          "1"
+        ],
+        "selectedStageRoles": [],
+        "type": "manualJudgment"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "cluster": "production",
+        "criteria": "oldest",
+        "kind": "replicaSet",
+        "location": "default",
+        "mode": "dynamic",
+        "name": "Disable (Production)",
+        "refId": "6",
+        "requisiteStageRefIds": [
+          "7"
+        ],
+        "type": "disableManifest"
+      },
+      {
+        "name": "Check (Production)",
+        "preconditions": [
+          {
+            "cloudProvider": "kubernetes",
+            "context": {
+              "cluster": "production",
+              "comparison": ">",
+              "credentials": "minikube",
+              "expected": 0,
+              "moniker": {
+                "app": "flask-app",
+                "cluster": "production",
+                "stack": "green"
+              },
+              "regions": [
+                "default"
+              ]
+            },
+            "failPipeline": false,
+            "type": "clusterSize"
+          }
+        ],
+        "refId": "7",
+        "requisiteStageRefIds": [
+          "5"
+        ],
+        "type": "checkPreconditions"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "cluster": "staging",
+        "criteria": "newest",
+        "kind": "replicaSet",
+        "location": "default",
+        "mode": "dynamic",
+        "name": "Swap (Staging)",
+        "options": {
+          "mergeStrategy": "json",
+          "record": false
+        },
+        "patchBody": [
+          {
+            "op": "replace",
+            "path": "/metadata/annotations/moniker.spinnaker.io~1cluster",
+            "value": "production"
+          },
+          {
+            "op": "replace",
+            "path": "/metadata/annotations/moniker.spinnaker.io~1stack",
+            "value": "green"
+          }
+        ],
+        "refId": "8",
+        "requisiteStageRefIds": [
+          "5"
+        ],
+        "source": "text",
+        "type": "patchManifest"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "cluster": "production",
+        "criteria": "oldest",
+        "kind": "replicaSet",
+        "location": "default",
+        "mode": "dynamic",
+        "name": "Swap (Production)",
+        "options": {
+          "mergeStrategy": "json",
+          "record": false
+        },
+        "patchBody": [
+          {
+            "op": "replace",
+            "path": "/metadata/annotations/moniker.spinnaker.io~1cluster",
+            "value": "staging"
+          },
+          {
+            "op": "replace",
+            "path": "/metadata/annotations/moniker.spinnaker.io~1stack",
+            "value": "blue"
+          }
+        ],
+        "refId": "9",
+        "requisiteStageRefIds": [
+          "6"
+        ],
+        "source": "text",
+        "type": "patchManifest"
+      },
+      {
+        "failPipeline": true,
+        "instructions": "Scale down <b>Staging</b>?",
+        "judgmentInputs": [
+          {
+            "value": "Yes"
+          },
+          {
+            "value": "No"
+          }
+        ],
+        "name": "Scale Down Approval",
+        "notifications": [],
+        "refId": "10",
+        "requisiteStageRefIds": [
+          "9"
+        ],
+        "type": "manualJudgment"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "cluster": "staging",
+        "criteria": "newest",
+        "kind": "replicaSet",
+        "location": "default",
+        "mode": "dynamic",
+        "name": "Scale Down (Staging)",
+        "refId": "11",
+        "replicas": "0",
+        "requisiteStageRefIds": [
+          "10"
+        ],
+        "stageEnabled": {
+          "expression": "${ #judgment(\"Scale Down Approval\").equals(\"Yes\")}",
+          "type": "expression"
+        },
+        "type": "scaleManifest"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "location": "default",
+        "manifestName": "ingress flask-app",
+        "mode": "static",
+        "name": "Route (Staging)",
+        "options": {
+          "mergeStrategy": "json",
+          "record": false
+        },
+        "patchBody": [
+          {
+            "op": "replace",
+            "path": "/spec/rules/0/host",
+            "value": "production.minikube"
+          }
+        ],
+        "refId": "12",
+        "requisiteStageRefIds": [
+          "8"
+        ],
+        "source": "text",
+        "type": "patchManifest"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "location": "default",
+        "manifestName": "ingress flask-app",
+        "mode": "static",
+        "name": "Route (Production)",
+        "options": {
+          "mergeStrategy": "json",
+          "record": false
+        },
+        "patchBody": [
+          {
+            "op": "replace",
+            "path": "/spec/rules/0/host",
+            "value": "staging.minikube"
+          }
+        ],
+        "refId": "13",
+        "requisiteStageRefIds": [
+          "9"
+        ],
+        "source": "text",
+        "type": "patchManifest"
+      }
+    ],
+    "triggers": [
+      {
+        "enabled": true,
+        "job": "flask-app",
+        "master": "jenkins",
+        "propertyFile": "image.json",
+        "runAsUser": "spinnaker-service-account@spinnaker",
+        "type": "jenkins"
+      }
+    ],
+    "updateTs": "1686860668000"
+  }

@@ -1,0 +1,80 @@
+pipeline {
+  agent {
+    kubernetes {
+      defaultContainer "docker"
+      yaml """
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: docker
+            image: docker:latest
+            command:
+            - cat
+            tty: true
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-sock
+          volumes:
+          - name: docker-sock
+            hostPath:
+              path: /var/run/docker.sock
+      """
+    }
+  }
+  options {
+    buildDiscarder logRotator(
+      artifactDaysToKeepStr: "30",
+      artifactNumToKeepStr: "365",
+      daysToKeepStr: "365",
+      numToKeepStr: "100"
+    )
+    timeout(time: 1, unit: "HOURS")
+    retry(2)
+  }
+  parameters {
+    choice(name: "BRANCH", choices: ["master", "develop"], description: "Select branch to build:")
+  }
+  environment {
+    IMAGE_NAME = "ealii/flask-app"
+    IMAGE_TAG = "${params.BRANCH}-${env.GIT_COMMIT.take(8)}"
+  }
+  stages {
+    stage("Build") {
+      steps {
+        script {
+          currentBuild.displayName = "flask-app:${env.IMAGE_TAG}"
+        }
+        withCredentials([
+          usernamePassword(
+            credentialsId: "dockerhub",
+            usernameVariable: "USERNAME",
+            passwordVariable: "PASSWORD"
+          )
+        ]) {
+          dir("app") {
+            sh """
+              docker login -u $USERNAME -p $PASSWORD
+              docker build -t $IMAGE_NAME:$IMAGE_TAG --build-arg VERSION=$GIT_COMMIT .
+            """
+          }
+        }
+      }
+    }
+    stage("Push") {
+      steps {
+        sh """
+          docker push $IMAGE_NAME:$IMAGE_TAG
+          docker image inspect -f '{{json . }}' $IMAGE_NAME:$IMAGE_TAG > image.json
+          docker image rm $IMAGE_NAME:$IMAGE_TAG
+        """
+        archiveArtifacts "image.json"
+      }
+    }
+  }
+  post {
+    always {
+      sh "docker logout"
+    }
+  }
+}

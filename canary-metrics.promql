@@ -1,0 +1,5 @@
+# Request Latency
+sum(delta(http_request_duration_seconds_bucket{le="0.25",namespace="${location}"}[10s]))
+
+# Request Success
+sum(rate(http_request_total{status="200",namespace="${location}"}[10s]))

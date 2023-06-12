@@ -1,0 +1,6 @@
+.hal/
+.spin/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class

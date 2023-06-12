@@ -1,0 +1,516 @@
+{
+    "keepWaitingPipelines": false,
+    "lastModifiedBy": "gavawe2064@ozatvn.com",
+    "limitConcurrent": true,
+    "parameterConfig": [
+      {
+        "default": "",
+        "description": "Baseline Version",
+        "hasOptions": false,
+        "label": "Baseline",
+        "name": "baseline",
+        "options": [
+          {
+            "value": ""
+          }
+        ],
+        "pinned": true,
+        "required": true
+      },
+      {
+        "default": "",
+        "description": "Canary Version",
+        "hasOptions": false,
+        "label": "Canary",
+        "name": "canary",
+        "options": [
+          {
+            "value": ""
+          }
+        ],
+        "pinned": true,
+        "required": true
+      }
+    ],
+    "schema": "1",
+    "spelEvaluator": "v4",
+    "stages": [
+      {
+        "account": "minikube",
+        "cloudProvider": "kubernetes",
+        "manifests": [
+          {
+            "apiVersion": "v1",
+            "kind": "Namespace",
+            "metadata": {
+              "name": "baseline"
+            }
+          }
+        ],
+        "moniker": {
+          "app": "flask-app"
+        },
+        "name": "Init (Baseline)",
+        "namespaceOverride": "",
+        "refId": "1",
+        "requisiteStageRefIds": [],
+        "skipExpressionEvaluation": false,
+        "source": "text",
+        "trafficManagement": {
+          "enabled": false,
+          "options": {
+            "enableTraffic": false,
+            "services": []
+          }
+        },
+        "type": "deployManifest"
+      },
+      {
+        "account": "minikube",
+        "cloudProvider": "kubernetes",
+        "manifests": [
+          {
+            "apiVersion": "v1",
+            "kind": "Namespace",
+            "metadata": {
+              "name": "canary"
+            }
+          }
+        ],
+        "moniker": {
+          "app": "flask-app"
+        },
+        "name": "Init (Canary)",
+        "refId": "2",
+        "requisiteStageRefIds": [],
+        "skipExpressionEvaluation": false,
+        "source": "text",
+        "trafficManagement": {
+          "enabled": false,
+          "options": {
+            "enableTraffic": false,
+            "services": []
+          }
+        },
+        "type": "deployManifest"
+      },
+      {
+        "expectedArtifacts": [
+          {
+            "defaultArtifact": {
+              "customKind": true,
+              "id": "1d52e8c8-df68-44f8-8b8a-1210fa0745a2"
+            },
+            "displayName": "baseline-manifest",
+            "id": "63f55ff6-9770-476a-922b-5363eacec128",
+            "matchArtifact": {
+              "artifactAccount": "embedded-artifact",
+              "customKind": false,
+              "id": "1594ec13-9b3b-4f05-b7ce-f78468ab0aa5",
+              "type": "embedded/base64"
+            },
+            "useDefaultArtifact": false,
+            "usePriorArtifact": false
+          }
+        ],
+        "inputArtifact": {
+          "account": "github.com",
+          "artifact": {
+            "artifactAccount": "github.com",
+            "customKind": true,
+            "id": "036f2e6f-38f4-4e9c-ae0f-35512bc97326",
+            "location": "deploy",
+            "reference": "https://github.com/ealii/flask-app.git",
+            "type": "git/repo",
+            "version": "master"
+          }
+        },
+        "kustomizeFilePath": "deploy/kustomization.yaml",
+        "name": "Manifest (Baseline)",
+        "overrides": {},
+        "refId": "3",
+        "requisiteStageRefIds": [
+          "4"
+        ],
+        "templateRenderer": "KUSTOMIZE4",
+        "type": "bakeManifest"
+      },
+      {
+        "failOnFailedExpressions": true,
+        "name": "Parameters (Baseline)",
+        "refId": "4",
+        "requisiteStageRefIds": [
+          "1"
+        ],
+        "type": "evaluateVariables",
+        "variables": [
+          {
+            "key": "cluster_name",
+            "value": "baseline"
+          },
+          {
+            "key": "stack_name",
+            "value": "baseline"
+          },
+          {
+            "key": "image_ref",
+            "value": "ealii/flask-app:${ parameters.baseline }"
+          }
+        ]
+      },
+      {
+        "account": "minikube",
+        "cloudProvider": "kubernetes",
+        "manifestArtifactId": "63f55ff6-9770-476a-922b-5363eacec128",
+        "moniker": {
+          "app": "flask-app"
+        },
+        "name": "Deploy (Baseline)",
+        "namespaceOverride": "baseline",
+        "refId": "5",
+        "requiredArtifactIds": [],
+        "requiredArtifacts": [
+          {
+            "artifact": {
+              "artifactAccount": "custom-artifact",
+              "customKind": true,
+              "id": "40bf58ed-af44-40a2-b9a1-f50edbf3999b",
+              "name": "ealii/flask-app",
+              "reference": "${ image_ref }",
+              "type": "docker/image"
+            }
+          }
+        ],
+        "requisiteStageRefIds": [
+          "3"
+        ],
+        "skipExpressionEvaluation": false,
+        "source": "artifact",
+        "trafficManagement": {
+          "enabled": true,
+          "options": {
+            "enableTraffic": true,
+            "namespace": "baseline",
+            "services": [
+              "service flask-app"
+            ],
+            "strategy": "highlander"
+          }
+        },
+        "type": "deployManifest"
+      },
+      {
+        "failOnFailedExpressions": true,
+        "name": "Parameters (Canary)",
+        "refId": "6",
+        "requisiteStageRefIds": [
+          "2"
+        ],
+        "type": "evaluateVariables",
+        "variables": [
+          {
+            "key": "cluster_name",
+            "value": "canary"
+          },
+          {
+            "key": "stack_name",
+            "value": "canary"
+          },
+          {
+            "key": "image_ref",
+            "value": "ealii/flask-app:${ parameters.canary }"
+          }
+        ]
+      },
+      {
+        "expectedArtifacts": [
+          {
+            "defaultArtifact": {
+              "customKind": true,
+              "id": "ba8e0a8e-27ef-44f5-b712-f8f273e51869"
+            },
+            "displayName": "canary-manifest",
+            "id": "51aaf6ee-7403-41f2-b388-0125129d9ee4",
+            "matchArtifact": {
+              "artifactAccount": "embedded-artifact",
+              "customKind": false,
+              "id": "22a15f59-d036-4817-865c-120025a2d700",
+              "type": "embedded/base64"
+            },
+            "useDefaultArtifact": false,
+            "usePriorArtifact": false
+          }
+        ],
+        "inputArtifact": {
+          "account": "github.com",
+          "artifact": {
+            "artifactAccount": "github.com",
+            "customKind": true,
+            "id": "56a2fc1d-26c7-45c5-8903-a456a1a70bfe",
+            "location": "deploy",
+            "reference": "https://github.com/ealii/flask-app.git",
+            "type": "git/repo",
+            "version": "master"
+          }
+        },
+        "kustomizeFilePath": "deploy/kustomization.yaml",
+        "name": "Manifest (Canary)",
+        "overrides": {},
+        "refId": "7",
+        "requisiteStageRefIds": [
+          "6"
+        ],
+        "templateRenderer": "KUSTOMIZE4",
+        "type": "bakeManifest"
+      },
+      {
+        "account": "minikube",
+        "cloudProvider": "kubernetes",
+        "manifestArtifactId": "51aaf6ee-7403-41f2-b388-0125129d9ee4",
+        "moniker": {
+          "app": "flask-app"
+        },
+        "name": "Deploy (Canary)",
+        "namespaceOverride": "canary",
+        "refId": "8",
+        "requiredArtifactIds": [],
+        "requiredArtifacts": [
+          {
+            "artifact": {
+              "artifactAccount": "custom-artifact",
+              "customKind": true,
+              "id": "c8255735-56f6-4198-abff-b417e63bc4c0",
+              "name": "ealii/flask-app",
+              "reference": "${ image_ref }",
+              "type": "docker/image"
+            }
+          }
+        ],
+        "requisiteStageRefIds": [
+          "7"
+        ],
+        "skipExpressionEvaluation": false,
+        "source": "artifact",
+        "trafficManagement": {
+          "enabled": true,
+          "options": {
+            "enableTraffic": true,
+            "namespace": "canary",
+            "services": [
+              "service flask-app"
+            ],
+            "strategy": "highlander"
+          }
+        },
+        "type": "deployManifest"
+      },
+      {
+        "failPipeline": true,
+        "instructions": "Deploy your changes to <b>Production</b>?",
+        "judgmentInputs": [],
+        "name": "Approval (Deploy)",
+        "notifications": [],
+        "refId": "9",
+        "requisiteStageRefIds": [
+          "13"
+        ],
+        "type": "manualJudgment"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "location": "baseline",
+        "manifestName": "namespace baseline",
+        "mode": "static",
+        "name": "Cleanup (Baseline)",
+        "options": {
+          "cascading": true
+        },
+        "refId": "10",
+        "requisiteStageRefIds": [
+          "9"
+        ],
+        "type": "deleteManifest"
+      },
+      {
+        "account": "minikube",
+        "app": "flask-app",
+        "cloudProvider": "kubernetes",
+        "location": "canary",
+        "manifestName": "namespace canary",
+        "mode": "static",
+        "name": "Cleanup (Canary)",
+        "options": {
+          "cascading": true
+        },
+        "refId": "11",
+        "requisiteStageRefIds": [
+          "9"
+        ],
+        "type": "deleteManifest"
+      },
+      {
+        "failPipeline": true,
+        "instructions": "Start the analysis?",
+        "judgmentInputs": [
+          {
+            "value": "Yes"
+          },
+          {
+            "value": "No"
+          }
+        ],
+        "name": "Approval (Analysis)",
+        "notifications": [],
+        "refId": "12",
+        "requisiteStageRefIds": [
+          "5",
+          "8"
+        ],
+        "type": "manualJudgment"
+      },
+      {
+        "analysisType": "realTime",
+        "canaryConfig": {
+          "canaryAnalysisIntervalMins": "1",
+          "canaryConfigId": "4c6f742e-b4fc-431c-82c5-6ffb7cb661c2",
+          "lifetimeDuration": "PT0H3M",
+          "metricsAccountName": "prometheus",
+          "scopes": [
+            {
+              "controlLocation": "baseline",
+              "controlScope": "baseline",
+              "experimentLocation": "canary",
+              "experimentScope": "canary",
+              "extendedScopeParams": {},
+              "scopeName": "default",
+              "step": 5
+            }
+          ],
+          "scoreThresholds": {
+            "marginal": "1",
+            "pass": "90"
+          },
+          "storageAccountName": "minio"
+        },
+        "name": "Canary Analysis",
+        "refId": "13",
+        "requisiteStageRefIds": [
+          "12"
+        ],
+        "stageEnabled": {
+          "expression": "${ #judgment(\"Approval (Analysis)\").equals(\"Yes\")}",
+          "type": "expression"
+        },
+        "type": "kayentaCanary"
+      },
+      {
+        "failOnFailedExpressions": true,
+        "name": "Parameters (Production)",
+        "refId": "14",
+        "requisiteStageRefIds": [
+          "9"
+        ],
+        "type": "evaluateVariables",
+        "variables": [
+          {
+            "key": "cluster_name",
+            "value": "production"
+          },
+          {
+            "key": "stack_name",
+            "value": "green"
+          },
+          {
+            "key": "image_ref",
+            "value": "ealii/flask-app:${ parameters.canary }"
+          }
+        ]
+      },
+      {
+        "expectedArtifacts": [
+          {
+            "defaultArtifact": {
+              "customKind": true,
+              "id": "98e83f39-af37-4f6b-ad41-52dbddbf7462"
+            },
+            "displayName": "production-manifest",
+            "id": "dd59f087-87b5-47e0-bff2-926a85c003f8",
+            "matchArtifact": {
+              "artifactAccount": "embedded-artifact",
+              "customKind": false,
+              "id": "8b578b94-4c5f-424e-a82d-096bb59ff457",
+              "type": "embedded/base64"
+            },
+            "useDefaultArtifact": false,
+            "usePriorArtifact": false
+          }
+        ],
+        "inputArtifact": {
+          "account": "github.com",
+          "artifact": {
+            "artifactAccount": "github.com",
+            "customKind": true,
+            "id": "f8ee4b74-e5c7-4ad9-bba5-f5edd277fafa",
+            "location": "deploy",
+            "reference": "https://github.com/ealii/flask-app.git",
+            "type": "git/repo",
+            "version": "master"
+          }
+        },
+        "kustomizeFilePath": "deploy/kustomization.yaml",
+        "name": "Manifest (Production)",
+        "overrides": {},
+        "refId": "15",
+        "requisiteStageRefIds": [
+          "14"
+        ],
+        "templateRenderer": "KUSTOMIZE4",
+        "type": "bakeManifest"
+      },
+      {
+        "account": "minikube",
+        "cloudProvider": "kubernetes",
+        "manifestArtifactId": "dd59f087-87b5-47e0-bff2-926a85c003f8",
+        "moniker": {
+          "app": "flask-app"
+        },
+        "name": "Deploy (Production)",
+        "namespaceOverride": "default",
+        "refId": "16",
+        "requiredArtifactIds": [],
+        "requiredArtifacts": [
+          {
+            "artifact": {
+              "artifactAccount": "custom-artifact",
+              "customKind": true,
+              "id": "c9626a8a-2f66-426f-a824-1dbcc1c1e652",
+              "name": "ealii/flask-app",
+              "reference": "${ image_ref }",
+              "type": "docker/image"
+            }
+          }
+        ],
+        "requisiteStageRefIds": [
+          "15"
+        ],
+        "skipExpressionEvaluation": false,
+        "source": "artifact",
+        "trafficManagement": {
+          "enabled": true,
+          "options": {
+            "enableTraffic": true,
+            "namespace": "default",
+            "services": [
+              "service flask-app"
+            ],
+            "strategy": "bluegreen"
+          }
+        },
+        "type": "deployManifest"
+      }
+    ],
+    "triggers": [],
+    "updateTs": "1686860392000"
+  }
