@@ -13,6 +13,4 @@ metrics = PrometheusMetrics(app, defaults_prefix=NO_PREFIX)
 
 @app.route("/")
 def index():
-    status = random.choice([200, 201, 202])
-    time.sleep(random.uniform(0.1, 0.3))
-    return f"version: {os.getenv('VERSION', 'unknown')}", status
+    return f"version: {os.getenv('VERSION', 'unknown')}"
